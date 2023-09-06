@@ -172,8 +172,6 @@ void initializeParticles() {
             particles.push_back(p);
         }
     }
-    
-    
 }
 
 // Function to calculate density and pressure for each particle
