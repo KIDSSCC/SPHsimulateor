@@ -2,35 +2,13 @@
 #include <cmath>
 #include <vector>
 #include<iostream>
+#include "include/SPH2D.h"
+#include "include/utils.h"
 using namespace std;
 // 常量的声明
-double PI = 3.141;
-
-//winSize为600，等效为6cm
-double winSize = 600;
-//光滑核半径，0.002米
-double H = 0.0015;
-double MASS = 0.0001;
-double RHO0 = 1;
-double K = 20;
-double MU = 0.1;
-double G = -9.8;
-
-double Vel_atten = 0.2;
-
-struct Particle {
-    //粒子的位置，速度，加速度
-    double x, y;
-    double vx, vy;
-    double ax, ay;
-    //密度和压力
-    double rho;
-    double p;
-};
 
 std::vector<Particle> particles;
-double timeStep = 0.0001;
-double timeElapsed = 0.0;
+
 double maxX = 1.0, maxY = 1.0;
 double minX = 0.0, minY = 0.0;
 
@@ -89,12 +67,13 @@ vector<double> getViscosityAcerlate(Particle& i, Particle& j)
     return res;
 }
 
+//单个粒子处的压力
 double pressure(Particle p) {
     return 0.4 * (p.rho/RHO0 - 1);
 }
 
 
-// Function to calculate acceleration
+// 计算加速度
 void calculateAcceleration(Particle& p) {
     p.ax = 0.0;
     p.ay = G;
@@ -118,7 +97,7 @@ void calculateAcceleration(Particle& p) {
     }
 }
 
-// Function to update particle positions and velocities
+// 速度位置更新
 void updateParticles() {
     int i = 0;
     for (Particle& p : particles) {
@@ -149,17 +128,16 @@ void updateParticles() {
         //cout << "position is: " << p.x << " " << p.y << endl;
         calculateAcceleration(p);
         //cout << endl;
-        //exit(0);
     }
 }
 
-// Function to initialize particles
+// 粒子初始化
 void initializeParticles() {
 
-    //particles.push_back({0.4, 0.2, 0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    //particles.push_back({ 0.4, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });
-    for (double x = 0.1; x < 0.4; x += 0.1) {
-        for (double y = 0.1; y < 0.4; y += 0.1) {
+    /*particles.push_back({0.4, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    particles.push_back({ 0.43, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });*/
+    for (double x = 0.2; x < 0.5; x += 0.03) {
+        for (double y = 0.4; y < 0.7; y += 0.03) {
             Particle p;
             p.x = x;
             p.y = y;
@@ -181,8 +159,6 @@ void calculateDensityAndPressure() {
         particles[i].rho = 0;
         for (int j = 0; j < particles.size(); j++)
         {
-            /*if (j == i)
-                continue;*/
             double r = distance(particles[i], particles[j]);
             if (r < H)
             {
@@ -240,7 +216,7 @@ void initOpenGL() {
 }
 
 // Main function
-int main(int argc, char** argv) {
+int SPH_2D(int argc, char** argv) {
     //初始化所有粒子
     initializeParticles();
     //为每一个粒子计算其密度和压力，
