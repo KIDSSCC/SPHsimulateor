@@ -18,11 +18,25 @@ static double Vel_atten = 0.2;
 static double timeStep = 0.0001;
 static double timeElapsed = 0.0;
 
+const double DEG_TO_RAD = 3.141592653589793 / 180.0;
+
 struct Particle {
     //粒子的位置，速度，加速度
     double x, y;
     double vx, vy;
     double ax, ay;
+    //密度和压力
+    double rho;
+    double p;
+};
+
+
+
+struct Particle3D {
+    //粒子的位置，速度，加速度
+    double x, y, z;
+    double vx, vy, vz;
+    double ax, ay, az;
     //密度和压力
     double rho;
     double p;
