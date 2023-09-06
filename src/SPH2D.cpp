@@ -134,14 +134,14 @@ void updateParticles() {
 // Á£×Ó³õÊ¼»¯
 void initializeParticles() {
 
-    /*particles.push_back({0.4, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    particles.push_back({ 0.43, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });*/
+    /*particles.push_back({0.4, 0.2, 0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    particles.push_back({ 0.4, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });*/
     for (double x = 0.2; x < 0.5; x += 0.03) {
         for (double y = 0.4; y < 0.7; y += 0.03) {
             Particle p;
             p.x = x;
             p.y = y;
-            p.vx = 0.02;
+            p.vx = -0.1;
             p.vy = -0.01;
             p.ax = 0.0;
             p.ay = 0.0;
