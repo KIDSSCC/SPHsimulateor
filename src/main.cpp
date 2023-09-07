@@ -4,5 +4,5 @@
 using namespace std;
 int main(int argc, char** argv)
 {
-	SPH_3D(argc, argv,1);
+	SPH_2D(argc, argv,0);
 }
