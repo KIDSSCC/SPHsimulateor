@@ -132,17 +132,22 @@ void updateParticles() {
 }
 
 // 粒子初始化
-void initializeParticles() {
+void initializeParticles(bool scale) {
 
-    /*particles.push_back({0.4, 0.2, 0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    particles.push_back({ 0.4, 0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0 });*/
-    for (double x = 0.2; x < 0.5; x += 0.03) {
-        for (double y = 0.4; y < 0.7; y += 0.03) {
+    /*particles.push_back({0.4, 0.2, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0});
+    particles.push_back({ 0.4, 0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0 });
+    */
+    double length = 0;
+    if (scale)
+        length = 0.1;
+    double vx = 0.5;
+    for (double y = 0.2; y < 0.4+ length; y += 0.03) {
+        for (double x = 0.4;  x< 0.6+ length; x += 0.03) {
             Particle p;
             p.x = x;
             p.y = y;
-            p.vx = -0.1;
-            p.vy = -0.01;
+            p.vx = vx;
+            p.vy = -0.2;
             p.ax = 0.0;
             p.ay = 0.0;
             p.rho = 0.0;
@@ -216,9 +221,9 @@ void initOpenGL() {
 }
 
 // Main function
-int SPH_2D(int argc, char** argv) {
+int SPH_2D(int argc, char** argv,bool scale) {
     //初始化所有粒子
-    initializeParticles();
+    initializeParticles(scale);
     //为每一个粒子计算其密度和压力，
     calculateDensityAndPressure();
     glutInit(&argc, argv);

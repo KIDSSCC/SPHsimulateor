@@ -7,14 +7,36 @@
 using namespace std;
 int winWidth = 800;
 int winHeight = 600;
-double tmp = 5;
+static double boundary = 4;
+
 
 static vector<Particle3D> particles;
 
+void renderString(float x, float y, void* font, const char* string) {
+    const char* c;
+    glMatrixMode(GL_PROJECTION);
+    glPushMatrix();
+    glLoadIdentity();
+    gluOrtho2D(0.0, winWidth, 0.0, winHeight);
 
+    glMatrixMode(GL_MODELVIEW);
+    glPushMatrix();
+    glLoadIdentity();
+
+    glRasterPos2f(x, y);
+    for (c = string; *c != '\0'; c++) {
+        glutBitmapCharacter(font, *c);
+    }
+
+    glPopMatrix();
+    glMatrixMode(GL_PROJECTION);
+    glPopMatrix();
+    glMatrixMode(GL_MODELVIEW);
+}
 void drawAxis()
 {
-    glColor3f(1.0, 0.0, 0.0);
+    
+    /*glColor3f(1.0, 0.0, 0.0);
     glPushMatrix();
     glTranslatef(8, 0.0, 0.0);
     glutSolidCube(0.5);
@@ -30,12 +52,43 @@ void drawAxis()
     glPushMatrix();
     glTranslatef(0.0, 0.0, 8);
     glutSolidCube(0.5);
-    glPopMatrix();
+    glPopMatrix();*/
+
+    // 绘制坐标轴
+// X轴: 红色
+    glColor3f(1.0, 0.0, 0.0);
+    glBegin(GL_LINES);
+    glVertex3f(0.0, 0.0, 0.0);
+    glVertex3f(8.0, 0.0, 0.0);  
+    glVertex3f(0.0, 4.0, 0.0);
+    glVertex3f(4.0, 4.0, 0.0);
+    glEnd();
+
+    // Y轴: 绿色
+    glColor3f(0.0, 1.0, 0.0);
+    glBegin(GL_LINES);
+    glVertex3f(0.0, 0.0, 0.0);
+    glVertex3f(0.0, 8.0, 0.0);
+    glVertex3f(4.0, 0.0, 0.0);
+    glVertex3f(4.0, 4.0, 0.0);
+    glEnd();
+
+    // Z轴: 蓝色
+    glColor3f(0.0, 0.0, 1.0);
+    glBegin(GL_LINES);
+    glVertex3f(0.0, 0.0, 0.0);
+    glVertex3f(0.0, 0.0, 8.0);
+    glEnd();
+
+    // 渲染2D标签
+    renderString(winWidth * 0.1, winHeight *0.1, GLUT_BITMAP_9_BY_15, "X");
+    renderString(winWidth *0.9, winHeight * 0.15, GLUT_BITMAP_9_BY_15, "Y");
+    renderString(winWidth *0.5, winHeight *0.9, GLUT_BITMAP_9_BY_15, "Z");
 
     //坐标原点的球
     glPushMatrix(); // 保存当前的模型视图矩阵
     glColor3f(0.0, 0.0, 0.0);
-    glutSolidSphere(0.5, 20, 20);
+    glutSolidSphere(0.2, 20, 20);
     glPopMatrix(); // 恢复之前的模型视图矩阵
 }
 
@@ -161,30 +214,30 @@ static void updateParticles()
         p.x += p.vx * timeStep * 100;
         p.y += p.vy * timeStep * 100;
         p.z += p.vz * timeStep * 100;
-        if (p.x > 6)
+        if (p.x > boundary)
         {
             p.vx = -Vel_atten * p.vx;
-            p.x = 6;
+            p.x = boundary;
         }
         if (p.x < 0)
         {
             p.vx = -Vel_atten * p.vx;
             p.x = 0;
         }
-        if (p.y > 6)
+        if (p.y > boundary)
         {
             p.vy = -Vel_atten * p.vy;
-            p.y = 6;
+            p.y = boundary;
         }
         if (p.y < 0)
         {
             p.vy = -Vel_atten * p.vy;
             p.y = 0;
         }
-        if (p.z > 6)
+        if (p.z > boundary)
         {
             p.vz = -Vel_atten * p.vz;
-            p.z = 6;
+            p.z = boundary;
         }
         if (p.z < 0)
         {
@@ -198,22 +251,25 @@ static void updateParticles()
     }
 }
 
-void initializeParticles3D()
+void initializeParticles3D(bool scale)
 {
-    particles.push_back({ 3, 3, 5, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0 });
-    particles.push_back({ 3, 3, 0, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0 });
-    /*for (double i = 3; i < 5; i+=0.5)
+    /*particles.push_back({ 3, 3, 5, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0 });
+    particles.push_back({ 3, 3, 4, 0.0, 0.0, 0.0, 0.0, 0.0,0.0,0.0,0.0 });*/
+    double length = 0;
+    if (scale)
+        length = 0.4;
+    for (double i = 2; i < 2.6+length; i+=0.2)
     {
-        for (double j = 3; j < 5; j+=0.5)
+        for (double j = 3; j < 3.6+ length; j+=0.2)
         {
-            for (double k = 3; k < 5; k+=0.5)
+            for (double k = 3; k < 3.6+length; k+=0.2)
             {
                 Particle3D p;
                 p.x = i;
                 p.y = j;
                 p.z = k;
-                p.vx = -0.1;
-                p.vy = -0.01;
+                p.vx = -0.5;
+                p.vy = -0.5;
                 p.vz = 0;
                 p.ax = 0.0;
                 p.ay = 0.0;
@@ -223,7 +279,7 @@ void initializeParticles3D()
                 particles.push_back(p);
             }
         }
-    }*/
+    }
 }
 
 static void drawParticles()
@@ -254,7 +310,7 @@ void display3D() {
 
     glutSwapBuffers();
 }
-int SPH_3D(int argc, char** argv) {
+int SPH_3D(int argc, char** argv,bool scale) {
     glutInit(&argc, argv);
     glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB | GLUT_DEPTH);
     glutInitWindowSize(winWidth, winHeight);
@@ -270,15 +326,17 @@ int SPH_3D(int argc, char** argv) {
     glLoadIdentity();
 
 
-    double camDistance = 20; // 调整这个值来放大或缩小视图
-    double camX = camDistance * sin(45.0 * DEG_TO_RAD) * cos(35.264 * DEG_TO_RAD);
-    double camY = camDistance * sin(45.0 * DEG_TO_RAD) * sin(35.264 * DEG_TO_RAD);
-    double camZ = camDistance * cos(45.0 * DEG_TO_RAD);
+    float dist = 12.0;
+    float angle = 35.264;  // X和Z轴与观察平面的角度
+    float isoX = dist * cos(angle * DEG_TO_RAD);
+    float isoZ = dist * sin(angle * DEG_TO_RAD);
+    float isoY = dist * sin(45 * DEG_TO_RAD);  // Y轴与观察平面的角度
 
-    gluLookAt(10, 0, 0, 0, 0, 2, 0, 0, 1);
+    cout << "isoX is: " << isoX << " isoY is: " << isoY << " isoZ is: " << isoZ << endl;
+    gluLookAt(isoX, isoY, isoZ, 0, 0, 2, 0, 0, 1);
 
 
-    initializeParticles3D();
+    initializeParticles3D(scale);
     calculateDensityAndPressure();
 
     glutDisplayFunc(display3D);
