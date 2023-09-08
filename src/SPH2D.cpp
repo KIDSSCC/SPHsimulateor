@@ -7,15 +7,20 @@
 using namespace std;
 // 常量的声明
 
-std::vector<Particle> particles;
+std::vector<Particle*> particles;
 
 double maxX = 1.0, maxY = 1.0;
 double minX = 0.0, minY = 0.0;
+double margin = 0;
 
 //以米为单位，计算两个粒子之间的距离
-double distance(Particle p1, Particle p2) {
-    auto res = sqrt(pow((p1.x - p2.x) * winSize / 100, 2) + pow((p1.y - p2.y) * winSize / 100, 2));
+double distance(Particle *p1, Particle *p2) {
+    auto res = sqrt(pow((p1->x - p2->x) * winSize / 100, 2) + pow((p1->y - p2->y) * winSize / 100, 2));
     return res/100;
+}
+double distance1(Particle* p1, Particle* p2) {
+    auto res = sqrt(pow((p1->x - p2->x) * winSize / 100, 2) + pow((p1->y - p2->y) * winSize / 100, 2));
+    return res / 100;
 }
 
 //poly核函数用于密度计算
@@ -30,7 +35,7 @@ double W_Poly6(double r)
 double K_Spiky = 30 / (7 * PI * pow(H, 5));
 double W_Spiky(double r)
 {
-    double res = K_Spiky / r * pow(H - r, 2);
+    double res = K_Spiky /r*pow(H - r, 2);
     return res;
 }
 
@@ -42,18 +47,20 @@ double W_Viscosity(double r)
     return res;
 }
 
-double getValueOfPressureAccerlate(Particle&i, Particle&j)
+double getValueOfPressureAccerlate(Particle* i, Particle* j)
 {
     double r = distance(i, j);
+    //cout << "in getValueOfPressureAccerlate,distance is:" <<r<< endl;
+    //cout << "相对位置：" << (i.y - j.y) * winSize / 100 << endl;
     double res = 0;
     if (r <= H)
     {
         //cout << "here,pressure is: " << (i.p + j.p) << endl;
-        res = MASS * (i.p + j.p) / (2 * i.rho * j.rho) * W_Spiky(r);
+        res = MASS * (i->p + j->p) / (2 * i->rho * j->rho) * W_Spiky(r);
     }
     return res;
 }
-vector<double> getViscosityAcerlate(Particle& i, Particle& j)
+vector<double> getViscosityAcerlate(Particle* i, Particle* j)
 {
     double r = distance(i, j);
     vector<double> res{0,0};
@@ -61,118 +68,157 @@ vector<double> getViscosityAcerlate(Particle& i, Particle& j)
     {
         //cout << "W_Viscosity is: " << W_Viscosity(r) << endl;
         //cout << "multi rho is: " << i.rho * j.rho << endl;
-        res[0] = MASS * MU * (j.vx - i.vx) / (i.rho * j.rho) * W_Viscosity(r);
-        res[1] = MASS * MU * (j.vy - i.vy) / (i.rho * j.rho) * W_Viscosity(r);
+        res[0] = MASS * MU * (j->vx - i->vx) / (i->rho * j->rho) * W_Viscosity(r);
+        res[1] = MASS * MU * (j->vy - i->vy) / (i->rho * j->rho) * W_Viscosity(r);
     }
     return res;
 }
 
 //单个粒子处的压力
-double pressure(Particle p) {
-    return 0.4 * (p.rho/RHO0 - 1);
+double pressure(Particle* p) {
+    return 0.4 * (p->rho/RHO0 - 1);
 }
 
 
 // 计算加速度
-void calculateAcceleration(Particle& p) {
-    p.ax = 0.0;
-    p.ay = G;
+void calculateAcceleration(Particle* p) {
+    p->ax = 0.0;
+    p->ay = G;
 
-    for (Particle &other : particles) {
-        if (&p == &other) {
-            continue;
+
+    //网格优化
+    int curr_i = p->i;
+    int curr_j = p->j;
+    for (int i = max(curr_i - 1, 0); i <= min(curr_i + 1, 39); i++)
+    {
+        for (int j = max(curr_j - 1, 0); j <= min(curr_j + 1, 39); j++)
+        {
+            //从grid[i][j]中获取所有的粒子
+            auto itea = grid[i][j]->next;
+            for (int k = 0; k < grid[i][j]->num; k++)
+            {
+                if (itea == p)
+                    continue;
+
+                double pressureAccerlate = getValueOfPressureAccerlate(p, itea);
+                p->ax += pressureAccerlate * ((p->x - itea->x) * winSize / 100);
+                p->ay += pressureAccerlate * ((p->y - itea->y) * winSize / 100);
+                auto viscosityAccerlate = getViscosityAcerlate(p, itea);
+                p->ax += viscosityAccerlate[0];
+                p->ay += viscosityAccerlate[1];
+                itea = itea->next;
+            }
         }
-
-        double pressureAccerlate = getValueOfPressureAccerlate(p, other);
-        //cout << "distance is: " << distance(p, other) << endl;
-        //cout << "pressureAccerlate is: " << pressureAccerlate << endl;
-        p.ax += pressureAccerlate * ((p.x - other.x) * winSize / 100);
-        p.ay += pressureAccerlate * ((p.y - other.y) * winSize / 100);
-        //cout << "pressure ax is: " << p.ax << " py is: " << p.ay << endl;
-        auto viscosityAccerlate = getViscosityAcerlate(p, other);
-        p.ax += viscosityAccerlate[0];
-        p.ay += viscosityAccerlate[1];
-        //cout << "viscosity is: " << viscosityAccerlate[0] << "  " << viscosityAccerlate[1] << endl;
-        //cout << "final ax is: " << p.ax << " ay is: " << p.ay << endl;
     }
+
+
+
+    //for (Particle *other : particles) {
+    //    if (p == other) {
+    //        continue;
+    //    }
+
+    //    double pressureAccerlate = getValueOfPressureAccerlate(p, other);
+    //    //cout << "distance is: " << distance(p, other) << endl;
+    //    //cout << "pressureAccerlate is: " << pressureAccerlate << endl;
+    //    p->ax += pressureAccerlate * ((p->x - other->x) * winSize / 100);
+    //    p->ay += pressureAccerlate * ((p->y - other->y) * winSize / 100);
+    //    //cout << "pressure ax is: " << p.ax << " py is: " << p.ay << endl;
+    //    auto viscosityAccerlate = getViscosityAcerlate(p, other);
+    //    p->ax += viscosityAccerlate[0];
+    //    p->ay += viscosityAccerlate[1];
+    //    //cout << "viscosity is: " << viscosityAccerlate[0] << "  " << viscosityAccerlate[1] << endl;
+    //    //cout << "final ax is: " << p.ax << " ay is: " << p.ay << endl;
+    //}
 }
 
 // 速度位置更新
 void updateParticles() {
     int i = 0;
-    for (Particle& p : particles) {
+    for (Particle* p : particles) {
+        
         //cout << "num is: " << i++ << endl;
         //cout << "position is: " << p.x << " " << p.y << endl;
         //cout << "velocity is: " << p.vx << "  " << p.vy << endl;
-        p.vx += p.ax * timeStep;
-        p.vy += p.ay * timeStep;
-        p.x += p.vx * timeStep*10000/winSize;
-        p.y += p.vy * timeStep*10000/winSize;
-        if (p.x > maxX) {
-            p.vx = -Vel_atten * p.vx;
-            p.x = maxX;
+        p->vx += p->ax * timeStep;
+        p->vy += p->ay * timeStep;
+        p->x += p->vx * timeStep*10000/winSize;
+        p->y += p->vy * timeStep*10000/winSize;
+        if (p->x > maxX) {
+            p->vx = -Vel_atten * p->vx;
+            p->x = maxX;
         }
-        if (p.x < minX) {
-            p.vx = -Vel_atten * p.vx;
-            p.x = minX;
+        if (p->x < minX) {
+            p->vx = -Vel_atten * p->vx;
+            p->x = minX;
         }
-        if (p.y > maxY) {
-            p.vy = -Vel_atten * p.vy;
-            p.y = maxY;
+        if (p->y > maxY) {
+            p->vy = -Vel_atten * p->vy;
+            p->y = maxY;
         }
-        if (p.y < minY) {
-            p.vy = -Vel_atten * p.vy;
-            p.y = minY;
+        if (p->y < minY) {
+            p->vy = -Vel_atten * p->vy;
+            p->y = minY;
         }
-        ////cout << p.ax << "  " << p.ay << endl;
+        //cout << p.ax << "  " << p.ay << endl;
         //cout << "position is: " << p.x << " " << p.y << endl;
         calculateAcceleration(p);
         //cout << endl;
+
+        //更新网格情况
+        joinInGrid(p);
     }
+    
 }
 
-// 粒子初始化
-void initializeParticles(bool scale) {
 
-    /*particles.push_back({0.4, 0.2, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0});
-    particles.push_back({ 0.4, 0, 0.5, 0.0, 0.0, 0.0, 0.0, 0.0 });
-    */
-    double length = 0;
-    if (scale)
-        length = 0.1;
-    double vx = 0.5;
-    for (double y = 0.2; y < 0.4+ length; y += 0.03) {
-        for (double x = 0.4;  x< 0.6+ length; x += 0.03) {
-            Particle p;
-            p.x = x;
-            p.y = y;
-            p.vx = vx;
-            p.vy = -0.2;
-            p.ax = 0.0;
-            p.ay = 0.0;
-            p.rho = 0.0;
-            p.p = 0.0;
-            particles.push_back(p);
-        }
-    }
-}
-
-// Function to calculate density and pressure for each particle
+// 计算每个粒子处的密度和每个粒子自己的压力
 void calculateDensityAndPressure() {
-    for (int i = 0; i < particles.size(); i++)
+    for (Particle* par : particles)
     {
-        particles[i].rho = 0;
-        for (int j = 0; j < particles.size(); j++)
+        //par->rho = 0;
+        //for (Particle* other : particles)
+        //{
+        //    double r = distance(par, other);
+        //    //cout << "distance is: " << r << endl;
+        //    if (r < H)
+        //    {
+        //        //cout << "value is: " << W_Poly6(r) << endl;
+        //        par->rho += MASS * W_Poly6(r);
+        //    }
+        //}
+        //par->p = pressure(par);
+        //cout << "pressure is: " << par.p << endl;
+        //cout << "rho is: " << par.rho << endl;
+         
+        
+        //将旧版的遍历全部更换为遍历局部网格内
+        int curr_i = par->i;
+        int curr_j = par->j;
+        par->rho = 0;
+        for (int i = max(curr_i - 1, 0); i <= min(curr_i + 1, 39);i++)
         {
-            double r = distance(particles[i], particles[j]);
-            if (r < H)
+            for (int j = max(curr_j - 1, 0); j <= min(curr_j + 1, 39); j++)
             {
-                particles[i].rho += MASS * W_Poly6(r);
+                //从grid[i][j]中获取所有的粒子
+                auto itea = grid[i][j]->next;
+                while(itea!=nullptr)
+                {
+                    if (itea == nullptr)
+                    {
+                        cout << "error\n";
+                        cout << "curr_i is: " << curr_i << " and curr_j is: " << curr_j << endl;
+                        cout << "i is: " << i << " j is: " << j << endl;
+                        cout << "num is: " << grid[i][j]->num << endl;
+                        //cout << "k is: " << k << endl;
+                    }
+                    double r = distance1(par, itea);
+                    par->rho += MASS * W_Poly6(r);
+                    itea = itea->next;
+                }
             }
         }
-        particles[i].p = pressure(particles[i]);
-        ////cout << "pressure is: " << particles[i].p << endl;
-        ////cout << "rho is: " << particles[i].rho << endl;
+        par->p = pressure(par);
     }
 
 }
@@ -180,16 +226,17 @@ void calculateDensityAndPressure() {
 // Function to draw particles
 void drawParticles() {
     int numSegment = 200;
+    //绘制出的粒子半径为0.06cm，此时对应的光滑核函数的平滑半径为0.15cm，二者之间保持三倍关系
     float radius = 0.01;
 
     glBegin(GL_POINTS);
-    for (Particle &p : particles) {
+    for (Particle *p : particles) {
         glColor3f(0.0, 0.0, 1.0);
         for (int i = 0; i < numSegment; i++)
         {
             float angle = i * 2.0 * PI / numSegment;
-            float x = p.x + radius * cos(angle);
-            float y = p.y + radius * sin(angle);
+            float x = p->x + radius * cos(angle);
+            float y = p->y + radius * sin(angle);
             glVertex2f(x, y);
         }
     }
@@ -217,7 +264,42 @@ void initOpenGL() {
     glClearColor(1.0, 1.0, 1.0, 1.0);
     glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
-    gluOrtho2D(minX, maxX, minY, maxY);
+    gluOrtho2D(minX-margin, maxX+ margin, minY- margin, maxY+ margin);
+}
+
+
+// 粒子初始化
+void initializeParticles(bool scale) {
+    initGrid(40);
+    /*particles.push_back(new Particle( 0.4, 0.2, 0, 0.0, 0.0, 0.0, 0.0, 0.0 ));
+    joinInGrid(particles[particles.size() - 1]);
+    particles.push_back(new Particle( 0.4, 0, 0, 0.0, 0.0, 0.0, 0.0, 0.0 ));
+    joinInGrid(particles[particles.size() - 1]);*/
+    
+    double length = 0;
+    if (scale)
+        length = 0.1;
+    double vx = 0.5;
+    for (double y = 0.2; y < 0.4+ length; y += 0.03) 
+    {
+        for (double x = 0.4;  x< 0.6+ length; x += 0.03) 
+        {
+            //cout << "x is: " << x << " y is: " << y << endl;
+            Particle* p=new Particle();
+            p->x = x;
+            p->y = y;
+            p->vx = vx;
+            p->vy = -0.2;
+            p->ax = 0.0;
+            p->ay = 0.0;
+            p->rho = 0.0;
+            p->p = 0.0;
+            particles.push_back(p);
+            joinInGrid(particles[particles.size()-1]);
+        }
+    }
+    printGrid();
+    
 }
 
 // Main function

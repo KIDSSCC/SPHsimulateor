@@ -1,4 +1,10 @@
 #pragma once
+#ifndef UTIL_H
+#define UTIL_H
+
+#include<vector>
+#include<iostream>
+
 
 //winSize为600，等效为6cm
 //光滑核半径，0.0015米
@@ -28,6 +34,17 @@ struct Particle {
     //密度和压力
     double rho;
     double p;
+    //用于网格采样优化
+    int i = -1, j = -1;
+    Particle* next = nullptr;
+    Particle* last = nullptr;
+    Particle(double x, double y, double vx, double vy, double ax, double ay, double rho, double p)
+        : x(x), y(y), vx(vx), vy(vy), ax(ax), ay(ay), rho(rho), p(p)
+    {
+        
+    }
+    Particle() {};
+
 };
 
 
@@ -41,3 +58,27 @@ struct Particle3D {
     double rho;
     double p;
 };
+
+
+//在网格划分中，作为每个桶的链表头；
+struct ListHead
+{
+    //next指向该桶中的第一个粒子，tail指向该桶中的最后一个粒子
+    Particle* next = nullptr;
+    Particle* tail = nullptr;
+    int num=0;
+
+    ListHead();
+    void addNew(Particle* par);
+};
+
+//全局网格
+extern std::vector<std::vector<ListHead*>> grid;
+
+void initGrid(int num);
+void joinInGrid(Particle* par);
+void printGrid();
+void removeFromOld(Particle* par);
+void checkFunc();
+#endif // UTIL_H
+
