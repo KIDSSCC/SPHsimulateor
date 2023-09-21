@@ -5,6 +5,7 @@
 using namespace std;
 int main(int argc, char** argv)
 {
-	SPH_2D(argc, argv,1);
+#define GRID_OPTIMIZE
+	SPH_2D(argc, argv,1,true);
 	//checkFunc();
 }

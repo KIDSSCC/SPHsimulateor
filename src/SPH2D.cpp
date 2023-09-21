@@ -8,20 +8,17 @@ using namespace std;
 // 常量的声明
 
 std::vector<Particle*> particles;
-
 double maxX = 1.0, maxY = 1.0;
 double minX = 0.0, minY = 0.0;
 double margin = 0;
+bool gridOptimize = false;
 
 //以米为单位，计算两个粒子之间的距离
 double distance(Particle *p1, Particle *p2) {
     auto res = sqrt(pow((p1->x - p2->x) * winSize / 100, 2) + pow((p1->y - p2->y) * winSize / 100, 2));
     return res/100;
 }
-double distance1(Particle* p1, Particle* p2) {
-    auto res = sqrt(pow((p1->x - p2->x) * winSize / 100, 2) + pow((p1->y - p2->y) * winSize / 100, 2));
-    return res / 100;
-}
+
 
 //poly核函数用于密度计算
 double K_Poly6 = 4 / (PI * pow(H, 8));
@@ -85,51 +82,52 @@ void calculateAcceleration(Particle* p) {
     p->ax = 0.0;
     p->ay = G;
 
-
-    //网格优化
-    int curr_i = p->i;
-    int curr_j = p->j;
-    for (int i = max(curr_i - 1, 0); i <= min(curr_i + 1, 39); i++)
+    if (gridOptimize)
     {
-        for (int j = max(curr_j - 1, 0); j <= min(curr_j + 1, 39); j++)
+        //网格优化
+        int curr_i = p->i;
+        int curr_j = p->j;
+        for (int i = max(curr_i - 1, 0); i <= min(curr_i + 1, 39); i++)
         {
-            //从grid[i][j]中获取所有的粒子
-            auto itea = grid[i][j]->next;
-            for (int k = 0; k < grid[i][j]->num; k++)
+            for (int j = max(curr_j - 1, 0); j <= min(curr_j + 1, 39); j++)
             {
-                if (itea == p)
-                    continue;
+                //从grid[i][j]中获取所有的粒子
+                auto itea = grid[i][j]->next;
+                for (int k = 0; k < grid[i][j]->num; k++)
+                {
+                    if (itea == p)
+                        continue;
 
-                double pressureAccerlate = getValueOfPressureAccerlate(p, itea);
-                p->ax += pressureAccerlate * ((p->x - itea->x) * winSize / 100);
-                p->ay += pressureAccerlate * ((p->y - itea->y) * winSize / 100);
-                auto viscosityAccerlate = getViscosityAcerlate(p, itea);
-                p->ax += viscosityAccerlate[0];
-                p->ay += viscosityAccerlate[1];
-                itea = itea->next;
+                    double pressureAccerlate = getValueOfPressureAccerlate(p, itea);
+                    p->ax += pressureAccerlate * ((p->x - itea->x) * winSize / 100);
+                    p->ay += pressureAccerlate * ((p->y - itea->y) * winSize / 100);
+                    auto viscosityAccerlate = getViscosityAcerlate(p, itea);
+                    p->ax += viscosityAccerlate[0];
+                    p->ay += viscosityAccerlate[1];
+                    itea = itea->next;
+                }
             }
         }
     }
-
-
-
-    //for (Particle *other : particles) {
-    //    if (p == other) {
-    //        continue;
-    //    }
-
-    //    double pressureAccerlate = getValueOfPressureAccerlate(p, other);
-    //    //cout << "distance is: " << distance(p, other) << endl;
-    //    //cout << "pressureAccerlate is: " << pressureAccerlate << endl;
-    //    p->ax += pressureAccerlate * ((p->x - other->x) * winSize / 100);
-    //    p->ay += pressureAccerlate * ((p->y - other->y) * winSize / 100);
-    //    //cout << "pressure ax is: " << p.ax << " py is: " << p.ay << endl;
-    //    auto viscosityAccerlate = getViscosityAcerlate(p, other);
-    //    p->ax += viscosityAccerlate[0];
-    //    p->ay += viscosityAccerlate[1];
-    //    //cout << "viscosity is: " << viscosityAccerlate[0] << "  " << viscosityAccerlate[1] << endl;
-    //    //cout << "final ax is: " << p.ax << " ay is: " << p.ay << endl;
-    //}
+    else
+    {
+        for (Particle *other : particles) {
+            if (p == other) {
+                continue;
+            }
+            double pressureAccerlate = getValueOfPressureAccerlate(p, other);
+            //cout << "distance is: " << distance(p, other) << endl;
+            //cout << "pressureAccerlate is: " << pressureAccerlate << endl;
+            p->ax += pressureAccerlate * ((p->x - other->x) * winSize / 100);
+            p->ay += pressureAccerlate * ((p->y - other->y) * winSize / 100);
+            //cout << "pressure ax is: " << p.ax << " py is: " << p.ay << endl;
+            auto viscosityAccerlate = getViscosityAcerlate(p, other);
+            p->ax += viscosityAccerlate[0];
+            p->ay += viscosityAccerlate[1];
+            //cout << "viscosity is: " << viscosityAccerlate[0] << "  " << viscosityAccerlate[1] << endl;
+            //cout << "final ax is: " << p.ax << " ay is: " << p.ay << endl;
+        }
+    }
 }
 
 // 速度位置更新
@@ -168,57 +166,56 @@ void updateParticles() {
         //更新网格情况
         joinInGrid(p);
     }
-    
+    //printGrid();
 }
 
 
 // 计算每个粒子处的密度和每个粒子自己的压力
 void calculateDensityAndPressure() {
     for (Particle* par : particles)
-    {
-        //par->rho = 0;
-        //for (Particle* other : particles)
-        //{
-        //    double r = distance(par, other);
-        //    //cout << "distance is: " << r << endl;
-        //    if (r < H)
-        //    {
-        //        //cout << "value is: " << W_Poly6(r) << endl;
-        //        par->rho += MASS * W_Poly6(r);
-        //    }
-        //}
-        //par->p = pressure(par);
-        //cout << "pressure is: " << par.p << endl;
-        //cout << "rho is: " << par.rho << endl;
-         
-        
-        //将旧版的遍历全部更换为遍历局部网格内
-        int curr_i = par->i;
-        int curr_j = par->j;
-        par->rho = 0;
-        for (int i = max(curr_i - 1, 0); i <= min(curr_i + 1, 39);i++)
+    { 
+        if (gridOptimize)
         {
-            for (int j = max(curr_j - 1, 0); j <= min(curr_j + 1, 39); j++)
+            //将旧版的遍历全部更换为遍历局部网格内
+            int curr_i = par->i;
+            int curr_j = par->j;
+            par->rho = 0;
+            for (int i = max(curr_i - 1, 0); i <= min(curr_i + 1, 39); i++)
             {
-                //从grid[i][j]中获取所有的粒子
-                auto itea = grid[i][j]->next;
-                while(itea!=nullptr)
+                for (int j = max(curr_j - 1, 0); j <= min(curr_j + 1, 39); j++)
                 {
-                    if (itea == nullptr)
+                    //从grid[i][j]中获取所有的粒子
+                    auto itea = grid[i][j]->next;
+                    for (int k = 0; k < grid[i][j]->num; k++)
                     {
-                        cout << "error\n";
-                        cout << "curr_i is: " << curr_i << " and curr_j is: " << curr_j << endl;
-                        cout << "i is: " << i << " j is: " << j << endl;
-                        cout << "num is: " << grid[i][j]->num << endl;
-                        //cout << "k is: " << k << endl;
+                        double r = distance(par, itea);
+                        if (r < H)
+                        {
+                            par->rho += MASS * W_Poly6(r);
+                        }
+                        itea = itea->next;
                     }
-                    double r = distance1(par, itea);
-                    par->rho += MASS * W_Poly6(r);
-                    itea = itea->next;
                 }
             }
+            par->p = pressure(par);
         }
-        par->p = pressure(par);
+        else
+        {
+            par->rho = 0;
+            for (Particle* other : particles)
+            {
+                double r = distance(par, other);
+                //cout << "distance is: " << r << endl;
+                if (r < H)
+                {
+                    //cout << "value is: " << W_Poly6(r) << endl;
+                    par->rho += MASS * W_Poly6(r);
+                }
+            }
+            par->p = pressure(par);
+            //cout << "pressure is: " << par.p << endl;
+            //cout << "rho is: " << par.rho << endl;
+        }
     }
 
 }
@@ -278,8 +275,8 @@ void initializeParticles(bool scale) {
     
     double length = 0;
     if (scale)
-        length = 0.1;
-    double vx = 0.5;
+        length = 0.2;
+    double vx = 0.05;
     for (double y = 0.2; y < 0.4+ length; y += 0.03) 
     {
         for (double x = 0.4;  x< 0.6+ length; x += 0.03) 
@@ -303,7 +300,8 @@ void initializeParticles(bool scale) {
 }
 
 // Main function
-int SPH_2D(int argc, char** argv,bool scale) {
+int SPH_2D(int argc, char** argv,bool scale,bool grid) {
+    gridOptimize = grid;
     //初始化所有粒子
     initializeParticles(scale);
     //为每一个粒子计算其密度和压力，

@@ -1,2 +1,2 @@
 #pragma once
-int SPH_2D(int argc, char** argv,bool scale);
+int SPH_2D(int argc, char** argv,bool scale,bool grid);
